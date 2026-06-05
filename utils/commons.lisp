@@ -178,6 +178,9 @@ arguments.  Unless COMPLETE-P is NIL, will check for mandatory components."
 
 ;;; misc utility
 (defun pddlify (sym &optional (package *pddl-package*))
+  "Return a symbol with the same name as SYM, but that is
+interned in PACKAGE (defaults to current binding of
+*PDDL-PACKAGE*)."
   (cond ((eq (symbol-package sym) (find-package package))
          sym)
         ((eq (symbol-package sym) (find-package :keyword))
@@ -387,6 +390,53 @@ arguments.  Unless COMPLETE-P is NIL, will check for mandatory components."
      (alexandria:appendf (cddr ,domain)
               ,action-list)))
 
+(defun domain-derived-predicates (domain)
+  (assert (domain-p domain))
+  (remove-if-not #'(lambda (x) (eq x :derived))
+                 (cddr domain) :key 'first))
+
+(defsetf domain-derived-predicates (domain) (derived-list)
+  `(progn
+     (check-type ,domain domain)
+     ;; remove all the old derived predicates
+     (setf (cddr ,domain)
+           (remove :derived (cddr ,domain)
+                   :key #'first))
+     (alexandria:appendf (cddr ,domain)
+              ,derived-list)))
+
+(defun derived-predicate-name (derived-predicate)
+  (assert (eq (first derived-predicate) :derived))
+  (first (second derived-predicate)))
+
+(defsetf derived-predicate-name (derived-predicate) (name)
+  `(progn
+     (assert (eq (first ,derived-predicate) :derived))
+     (setf (first (second ,derived-predicate)) (pddlify ,name))))
+
+(defun derived-predicate-params (derived-predicate)
+  (assert (eq (first derived-predicate) :derived))
+  (rest (second derived-predicate)))
+
+(defsetf derived-predicate-params (derived-predicate) (params)
+  `(progn
+     (assert (eq (first ,derived-predicate) :derived))
+     (setf
+      (rest (second ,derived-predicate))
+      (pddlify-tree ,params))))
+
+(defun derived-predicate-def (derived-predicate)
+  "Return the logical expression that gives the truth value of a
+DERIVED-PREDICATE, which is the third element of the derived predicate
+s-expression."
+  (assert (eq (first derived-predicate) :derived))
+  (third derived-predicate))
+
+(defsetf derived-predicate-def (derived-predicate) (defn)
+  `(progn
+     (assert (eq (first ,derived-predicate) :derived))
+     (setf (third ,derived-predicate) (pddlify-tree ,defn))))
+
 (defun domain-action (domain name &key (error-p t))
   (assert (domain-p domain))
   (let ((all-actions (domain-actions domain)))
@@ -554,9 +604,9 @@ dispense with quotes and keyword arguments."
                                                      pddl-domain2))))
         (parent-type-table (make-hash-table :test #'eql))
         all-types new-typed-list)
-    
+
     (setf all-types (all-types typed-list))
-    (loop 
+    (loop
       with start = 0
       with lst = typed-list
       for pos = (position '- lst)
