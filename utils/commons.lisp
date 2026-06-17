@@ -82,13 +82,14 @@
 
 ;; makers
 (defun make-domain (name &key (requirements +DEFAULT-REQUIREMENTS+ requirements-supplied-p)
-                           constants predicates
+                           constants predicates derived
                            functions actions types)
   (unless requirements-supplied-p
     (cerror "defaulting to ~s" "requirements flags for domain not supplied"
             +DEFAULT-REQUIREMENTS+))
   (let ((constants (pddlify-tree constants))
         (predicates (pddlify-tree predicates))
+        (derived (pddlify-tree derived))
         (actions (pddlify-tree actions))
         (types (pddlify-tree types))
         (functions (cond
@@ -109,6 +110,7 @@
        (:types ,@types)
        (:constants ,@constants)
        (:predicates ,@predicates)
+       ,@derived
        ,@(when functions `((:functions ,@functions)))
        ,@actions)))
 
@@ -118,24 +120,26 @@
             (unless (has-element-p old-domain :requirements)
               (error "No requirements in domain.  Don't know how to handle it."))
             (domain-element old-domain :requirements)))
-        (types
-          (when (has-element-p old-domain :types)
-            (domain-types old-domain)))
-        (predicates
-          (when (has-element-p old-domain :predicates)
-            (domain-predicates old-domain)))
+         (types
+           (when (has-element-p old-domain :types)
+             (domain-types old-domain)))
+         (predicates
+           (when (has-element-p old-domain :predicates)
+             (domain-predicates old-domain)))
+         (derived (domain-derived-predicates old-domain))
          (functions
            (when (has-element-p old-domain :functions)
              (domain-functions old-domain)))
-        (constants
-          (when (has-element-p old-domain :constants)
-            (domain-constants old-domain)))
-        (actions (domain-actions old-domain)))
+         (constants
+           (when (has-element-p old-domain :constants)
+             (domain-constants old-domain)))
+         (actions (domain-actions old-domain)))
     (make-domain (domain-name old-domain)
              :requirements requirements
              :types types
              :constants constants
              :predicates predicates
+             :derived derived
              :functions functions
              :actions actions)))
 
