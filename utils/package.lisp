@@ -43,21 +43,25 @@
    #:domain-element
 
    ;; specific accessors
-   #:domain-name
-   #:problem-name
-   #:problem-domain
-   #:problem-objects
-   #:problem-state
-   #:problem-goal
-   #:problem-requirements
-   #:domain-predicates
-   #:domain-reqs
-   #:domain-requirements
-   #:domain-types
-   #:domain-functions
-   #:domain-actions
-   #:domain-action
-   #:domain-constants
+    #:domain-name
+    #:problem-name
+    #:problem-domain
+    #:problem-objects
+    #:problem-state
+    #:problem-goal
+    #:problem-requirements
+    #:domain-predicates
+    #:domain-reqs
+    #:domain-requirements
+    #:domain-types
+    #:domain-functions
+    #:domain-actions
+    #:domain-action
+    #:domain-constants
+    #:domain-derived-predicates
+    #:derived-predicate-name
+    #:derived-predicate-params
+    #:derived-predicate-def
 
    ;;
    #:action-precondition

@@ -288,3 +288,65 @@
       (pprint-pddl domain str)
       :close-stream
       (is-true (probe-file pn)))))
+
+(test psr-large-derived-predicates-domain-load
+  (let ((domain (read-planning-input
+                 (merge-pathnames "psr-large-derived-predicates-adl-domain.pddl"
+                                  *tests-dir*))))
+    (is-true domain)
+    (let ((derived-predicates (domain-derived-predicates domain)))
+      (is (= (length derived-predicates) 4))
+      (is (equal
+           (pddlify-tree (sort '(unsafe upstream affected fed) #'string-lessp))
+           (sort (mapcar #'derived-predicate-name derived-predicates) #'string-lessp)))
+      (let ((sorted-preds (sort (copy-list derived-predicates) #'string-lessp :key 'derived-predicate-name)))
+        (is (equalp
+             (pddlify-tree '((?x - device) ; AFFECTED
+                             (?l - line) ; FED
+                             (?x - device ?sx - side) ; UNSAFE
+                             (?x - DEVICE ?sx - SIDE ?y - DEVICE ?sy - SIDE))) ; UPSTREAM
+             (mapcar #'derived-predicate-params sorted-preds)))
+        (is (equalp
+             (pddlify-tree '((and (breaker ?x)
+                              (exists (?sx - SIDE) (unsafe ?x ?sx))) ; AFFECTED
+                             (exists (?x - DEVICE)
+                              (and (closed ?x)
+                               (or (and (ext ?l ?x side1)
+                                    (or (breaker ?x)
+                                     (exists (?y - DEVICE)
+                                             (exists (?sy - SIDE)
+                                                     (and (breaker ?y)
+                                                          (upstream ?y ?sy ?x side2))))))
+                                (and (ext ?l ?x side2)
+                                 (or (breaker ?x)
+                                  (exists (?y - DEVICE)
+                                          (exists (?sy - SIDE)
+                                                  (and (breaker ?y)
+                                                       (upstream ?y ?sy ?x side1))))))))) ; FED
+                             (and (closed ?x)
+                              (or (and (= ?sx side1)
+                                   (exists (?l - LINE)
+                                    (and (ext ?l ?x side2)
+                                     (or (faulty ?l)
+                                         (exists (?y - DEVICE)
+                                                 (exists (?sy - SIDE)
+                                                         (and (con ?x side2 ?y ?sy)
+                                                              (unsafe ?y ?sy))))))))
+                               (and (= ?sx side2)
+                                (exists (?l - LINE)
+                                 (and (ext ?l ?x side1)
+                                  (or (faulty ?l)
+                                      (exists (?y - DEVICE)
+                                              (exists (?sy - SIDE)
+                                     (and (con ?x side1 ?y ?sy)
+                                          (unsafe ?y ?sy)))))))))) ; UNSAFE
+                             (and (closed ?x)
+                              (or (and (= ?sx side1) (con ?x side2 ?y ?sy))
+                               (and (= ?sx side2) (con ?x side1 ?y ?sy))
+                               (exists (?z - DEVICE)
+                                (and (closed ?z)
+                                 (or (and (con ?z side1 ?y ?sy)
+                                          (upstream ?x ?sx ?z side2))
+                                  (and (con ?z side2 ?y ?sy)
+                                       (upstream ?x ?sx ?z side1))))))))) ; UPSTREAM
+             (mapcar #'derived-predicate-def sorted-preds)))))))
